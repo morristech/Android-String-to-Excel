@@ -1,41 +1,57 @@
 from xml.dom import minidom
 import xlsxwriter
+import os
+import fnmatch
 
-# parse  xml files by name
-mydoc = minidom.parse('/values-tr/strings.xml')
-mydocEn = minidom.parse('/values/strings.xml')
+def dir_list_folder(head_dir, dir_name):
+    outputList = []
+    for root, dirs, files in os.walk(head_dir):
+    	for filename in fnmatch.filter(files, 'strings.xml'):
+        	outputList.append(os.path.join(root, filename))
+        # for d in dirs:
+        #     if dir_name in d:
+        #         outputList.append(os.path.join(root, d))
+    return outputList
 
-# Create a workbook and add a worksheet.
-workbook = xlsxwriter.Workbook('HPTranslate.xlsx') # increase here every build
-worksheet = workbook.add_worksheet()
+def askForProjectPath():
+	return raw_input("Write the project path (Eg: /Users/mobilion/DemoProject) : \n")
 
-# Start from the first cell. Rows and columns are zero indexed.
+def askForExcelName():
+	return raw_input("Write the excell name (Eg: DemoProject) : \n")
+
+# Set first values
 row = 0
 col = 0
+tempItems = []
+allNameAttributes = []
+paths = dir_list_folder(askForProjectPath() + '/app/src/main/res/', 'values')
+excelName = askForExcelName()
 
-#get items
-items = mydoc.getElementsByTagName('string')
-itemsEn = mydocEn.getElementsByTagName('string')
+if len(paths) != 0:
+	# Get all string tags
+	for path in paths:
+		tempItems.append(minidom.parse(path).getElementsByTagName('string'))
+	# Create a workbook and add a worksheet.
+	workbook = xlsxwriter.Workbook(excelName + '.xlsx')
+	worksheet = workbook.add_worksheet()
 
-
-#write all items data 
-for elem in items:
-    worksheet.write(row, col,     elem.attributes['name'].value)
-    if hasattr(elem.firstChild, 'data'):
-    	worksheet.write(row, col + 1, elem.firstChild.data)
-    row += 1
-for elemEn in itemsEn:
-	tempList = [i for i,elem in enumerate(items) if elem.attributes['name'].value == elemEn.attributes['name'].value]
-	actualRow = 0
-	if len(tempList) == 0:
-		actualRow = row
-		worksheet.write(actualRow, col,     elemEn.attributes['name'].value)
-		row += 1
-	elif len(tempList) == 1:
-		actualRow = tempList[0]
-	else :
-		break 
-	if hasattr(elemEn.firstChild, 'data'):
-		worksheet.write(actualRow, col + 2,elemEn.firstChild.data)
-		
-workbook.close()
+	indexOfTempItems = 1
+	for items in tempItems:
+		for elem in items:
+			tempList = [i for i,tempElem in enumerate(allNameAttributes) if tempElem == elem.attributes['name'].value]
+		  	actualRow = 0
+			if len(tempList) == 0:
+				actualRow = row
+				worksheet.write(actualRow, col,     elem.attributes['name'].value)
+				allNameAttributes.append(elem.attributes['name'].value)
+				row += 1
+			elif len(tempList) == 1:
+				actualRow = tempList[0]
+			else :
+				break 
+			if hasattr(elem.firstChild, 'data'):
+				worksheet.write(actualRow, col + indexOfTempItems, elem.firstChild.data)
+		indexOfTempItems += 1
+	workbook.close()
+else :
+	print("No path found")
