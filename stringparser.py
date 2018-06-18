@@ -6,7 +6,7 @@ import xlrd
 import xml.etree.ElementTree as ET  
 import io
 
-myKeysAndValues = []
+
 
 def dir_list_folder(head_dir, file_name):
     outputList = []
@@ -23,7 +23,7 @@ def askForProjectPathiOS():
 
 def askForExcelName():
 	return raw_input("Write the excel name (Eg: DemoProject) : \n")
-
+	
 def askForDirection():
 	answer = raw_input("Write X to xml -> excel\nWrite E to excel -> xml & strings \nWrite S to strings -> excel : \n")
 	if answer == "X":
@@ -71,49 +71,52 @@ def excelToStrings(dataExcel):
 
 def xmlToExcel():
 	# Set first values
-	row = 0
-	col = 0
+	row = 1
+	keyCol = 0
 	tempItems = []
 	allNameAttributes = []
 	paths = dir_list_folder(askForProjectPath() + '/app/src/main/res/', 'strings.xml')
 	excelName = askForExcelName()
 
 	if len(paths) != 0:
-		# Get all string tags
-		for path in paths:
-			tempItems.append(ET.parse(path).getroot().findall('string'))
 		# Create a workbook and add a worksheet.
 		workbook = xlsxwriter.Workbook(excelName + '.xls')
 		worksheet = workbook.add_worksheet()
 
-		indexOfTempItems = 1
+		# Get all string tags
+		for path in paths:
+			tempItems.append(ET.parse(path).getroot().findall('string'))
+			isoLangPath = path.split('/')
+			isoLang = ''
+			if len(isoLangPath) >= 2:
+				isoLang = isoLangPath[ len(isoLangPath) - 2].replace("values-", "")
+			worksheet.write(0, keyCol + indexOfLangCol, isoLang)
+
+		indexOfLangCol = 1
 		for items in tempItems:
 			for elem in items:
 				tempList = [i for i,tempElem in enumerate(allNameAttributes) if tempElem == elem.get('name')]
-			  	actualRow = 0
+			  	actualRow = 1
 				if len(tempList) == 0:
 					actualRow = row
-					worksheet.write(actualRow, col,     elem.get('name'))
+					worksheet.write(actualRow, keyCol,     elem.get('name'))
 					allNameAttributes.append(elem.get('name'))
 					row += 1
 				elif len(tempList) == 1:
-					actualRow = tempList[0]
+					actualRow = tempList[0] + 1 #since first row is second one
 				else :
 					break 
-				worksheet.write(actualRow, col + indexOfTempItems, elem.text)
-			indexOfTempItems += 1
+				worksheet.write(actualRow, keyCol + indexOfLangCol, elem.text)
+			indexOfLangCol += 1
 		workbook.close()
 	else :
 		print("No path found")
 
-def appendString(line):
-	myKeysAndValues.append( [n.replace("\"", "") for n in line.strip().split('=')])
-
 def stringsToExcel():
 	# Set first values
-	row = 0
-	col = 0
-	allNameAttributes = []
+	row = 1
+	keyCol = 0
+	allKeys = []
 	paths = dir_list_folder(askForProjectPathiOS(), 'Localizable.strings')
 	
 
@@ -123,27 +126,33 @@ def stringsToExcel():
 		workbook = xlsxwriter.Workbook(excelName + '.xls')
 		worksheet = workbook.add_worksheet()
 
-		indexOfTempItems = 1
-		# Get all string tags
+		indexOfLangCol = 1
 		for path in paths:
+			myKeysAndValues = []
 			lines = open(path).read().split('\n')
+			isoLangPath = path.split('/')
+			isoLang = ''
+			if len(isoLangPath) >= 2:
+				isoLang = isoLangPath[ len(isoLangPath) - 2].replace(".lproj", "")
+
+			worksheet.write(0, keyCol + indexOfLangCol, isoLang)
 			for line in lines:
-				appendString(line)
+				myKeysAndValues.append( [n.replace("\"", "") for n in line.strip().split('=')])
 				for elem in myKeysAndValues:
 					if len(elem) == 2 :
-						tempList = [i for i,tempElem in enumerate(allNameAttributes) if tempElem == elem[0]]
-					  	actualRow = 0
+						tempList = [i for i,tempKey in enumerate(allKeys) if tempKey == elem[0]]
+					  	actualRow = 1
 						if len(tempList) == 0:
 							actualRow = row
-							worksheet.write(actualRow, col,     elem[0])
-							allNameAttributes.append(elem[0])
+							worksheet.write(actualRow, keyCol,     elem[0])
+							allKeys.append(elem[0])
 							row += 1
 						elif len(tempList) == 1:
-							actualRow = tempList[0]
+							actualRow = tempList[0] + 1 #since first row is second one
 						else :
 							break 
-						worksheet.write(actualRow, col + indexOfTempItems, elem[1].decode('utf-8'))
-			indexOfTempItems += 1
+						worksheet.write(actualRow, keyCol + indexOfLangCol, elem[1].decode('utf-8'))
+			indexOfLangCol += 1
 		workbook.close()
 	else :
 		print("No path found")
