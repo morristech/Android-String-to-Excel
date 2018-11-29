@@ -16,10 +16,10 @@ def dir_list_folder(head_dir, file_name):
     return outputList
 
 def askForProjectPath():
-	return raw_input("Write the project path (Eg: /Users/mobilion/DemoProject) : \n")
+	return raw_input("Write the project path (Eg: /Users/salih/DemoProject) : \n")
 
 def askForProjectPathiOS():
-	return raw_input("Write the project's Assets path (Eg: /Users/mobilion/DemoProjectIos/DemoProject/Assets) : \n")
+	return raw_input("Write the project's Assets path (Eg: /Users/salih/DemoProjectIos/DemoProject/Assets) : \n")
 
 def askForExcelName():
 	return raw_input("Write the excel name (Eg: DemoProject) : \n")
@@ -48,10 +48,13 @@ def excelToXml(dataExcel):
 					items.text = table.cell_value(i, j + 1)
 			# create a new XML file with the results
 			mydata = ET.tostring(data)
-			folderName = "values-" + table.cell_value(0, j + 1)
+			if len(table.cell_value(0, j + 1)) > 0:
+				folderName = "values-" + table.cell_value(0, j + 1)
+			else :
+				folderName = "values"
 			if not os.path.exists(folderName):
 				os.makedirs(folderName) 
-			myfile = open(folderName + "/strings.xml", "w")  
+			myfile = open(folderName + "/strings.xml", 'w')  
 			myfile.write(mydata)
 			myfile.close()
 
@@ -59,7 +62,10 @@ def excelToStrings(dataExcel):
 	table = dataExcel.sheets()[0]
 	for j in range(table.ncols):
 		if j + 1 < table.ncols:
-			folderName = table.cell_value(0, j + 1) + ".lproj"
+			if len(table.cell_value(0, j + 1)) > 0:
+				folderName = table.cell_value(0, j + 1) + ".lproj"
+			else :
+				folderName = "DEF.lproj" # todo
 			if not os.path.exists(folderName):
 				os.makedirs(folderName) 
 			myfile = io.open(folderName + "/Localizable.strings", encoding='utf_8', mode='w')   
@@ -73,7 +79,6 @@ def xmlToExcel():
 	# Set first values
 	row = 1
 	keyCol = 0
-	tempItems = []
 	allNameAttributes = []
 	paths = dir_list_folder(askForProjectPath() + '/app/src/main/res/', 'strings.xml')
 	excelName = askForExcelName()
@@ -83,17 +88,15 @@ def xmlToExcel():
 		workbook = xlsxwriter.Workbook(excelName + '.xls')
 		worksheet = workbook.add_worksheet()
 
+		indexOfLangCol = 1
 		# Get all string tags
 		for path in paths:
-			tempItems.append(ET.parse(path).getroot().findall('string'))
+			items = ET.parse(path).getroot().findall('string')
 			isoLangPath = path.split('/')
 			isoLang = ''
 			if len(isoLangPath) >= 2:
-				isoLang = isoLangPath[ len(isoLangPath) - 2].replace("values-", "")
+				isoLang = isoLangPath[ len(isoLangPath) - 2].replace("values", "").replace("-", "")
 			worksheet.write(0, keyCol + indexOfLangCol, isoLang)
-
-		indexOfLangCol = 1
-		for items in tempItems:
 			for elem in items:
 				tempList = [i for i,tempElem in enumerate(allNameAttributes) if tempElem == elem.get('name')]
 			  	actualRow = 1
